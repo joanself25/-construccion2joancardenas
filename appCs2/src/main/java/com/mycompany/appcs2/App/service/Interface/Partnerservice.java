@@ -22,12 +22,6 @@ public interface Partnerservice {
 
     public void requestVIPSubscription(UserDTO userDto) throws Exception;
 
-    public void guestPartner(GuestDTO guestdto) throws Exception;
-
-    public void lowPartner(GuestDTO guestdto) throws Exception;
-
-    public void createInvoice(InvoiceDTO invoicedto) throws Exception;
-
-  
+    public void lowPartner(long partnerId) throws Exception;
 
 }

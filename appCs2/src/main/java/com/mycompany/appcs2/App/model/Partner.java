@@ -10,8 +10,28 @@ public class Partner {
     private String typeSuscription;
     private Date dateCreated;
 
-    public Partner() {
+    public double getFundsmoney() {
+        return fundsmoney;
+    }
 
+    public void setFundsmoney(double fundsmoney) {
+        this.fundsmoney = fundsmoney;
+    }
+
+    public String getTypeSuscription() {
+        return typeSuscription;
+    }
+
+    public void setTypeSuscription(String typeSuscription) {
+        this.typeSuscription = typeSuscription;
+    }
+
+    public Date getDateCreated() {
+        return dateCreated;
+    }
+
+    public void setDateCreated(Date dateCreated) {
+        this.dateCreated = dateCreated;
     }
 
     public long getId() {
@@ -38,19 +58,4 @@ public class Partner {
         this.fundsmoney = money;
     }
 
-    public String getTypeSuscription() {
-        return typeSuscription;
-    }
-
-    public void setTypeSuscription(String type) {
-        this.typeSuscription= type;
-    }
-
-    public Date getDateCreated() {
-        return dateCreated;
-    }
-
-    public void setDateCreated(Date dateCreated) {
-        this.dateCreated = dateCreated;
-    }
 }

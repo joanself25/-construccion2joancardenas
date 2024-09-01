@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.mycompany.appcs2.App.Controller.validator;
+package com.mycompany.appcs2.App.Controller.Validator;
 
 /**
  *
@@ -13,7 +13,8 @@ public abstract class CommonsValidator {
 
     public void isValidString(String element, String value) throws Exception {
         if (value.equals("")) {
-            throw new Exception(element + " no puede ser un valor vacio: ");
+            System.out.println("    ");
+            throw new Exception(element +   " no puede ser un valor vacio: ");
         }
     }
 
@@ -22,7 +23,8 @@ public abstract class CommonsValidator {
         try {
             return Integer.parseInt(value);
         } catch (Exception e) {
-            throw new Exception(element + " debe ser un valor valido. ");
+            System.out.println("    ");
+            throw new Exception(element +   " debe ser un valor valido. ");
         }
     }
 
@@ -31,7 +33,8 @@ public abstract class CommonsValidator {
         try {
             return Long.parseLong(value);
         } catch (NumberFormatException e) {
-            throw new Exception(element + " debe ser un valor valido. ");
+            System.out.println("    ");
+            throw new Exception(element +      " debe ser un valor valido. ");
         }
     }
 
@@ -40,7 +43,8 @@ public abstract class CommonsValidator {
         try {
             return Double.parseDouble(value);
         } catch (NumberFormatException e) {
-            throw new Exception(element + " debe ser un valor valido. ");
+            System.out.println("    ");
+            throw new Exception(element +           " debe ser un valor valido. ");
         }
     }
 

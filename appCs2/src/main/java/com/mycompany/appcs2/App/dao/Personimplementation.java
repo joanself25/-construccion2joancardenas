@@ -7,8 +7,32 @@ import com.mycompany.appcs2.App.Dto.PersonDTO;
 import com.mycompany.appcs2.App.dao.interfaces.PersonDao;
 import com.mycompany.appcs2.App.model.Person;
 import com.mycompany.appcs2.App.Helpers.Helpers;
+import java.sql.Connection;
+import java.sql.SQLException;
 
 public class Personimplementation implements PersonDao {
+
+    @Override
+    public void createPerson(PersonDTO personDto) throws Exception {
+        Person person = Helpers.parse(personDto);
+        String query = "INSERT INTO PERSON(DOCUMENT, NAME, CELLPHONE) VALUES (?, ?, ?)";
+        try (Connection conn = MYSQLConnection.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(query, PreparedStatement.RETURN_GENERATED_KEYS)) {
+            preparedStatement.setLong(1, person.getCedula());
+            preparedStatement.setString(2, person.getName());
+            preparedStatement.setLong(3, person.getCelphone());
+            preparedStatement.executeUpdate();
+
+            try (ResultSet generatedKeys = preparedStatement.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    personDto.setId(generatedKeys.getLong(1));
+                } else {
+                    throw new SQLException("Creating person failed, no ID obtained.");
+                }
+            }
+        } catch (SQLException e) {
+            throw new Exception("Error al crear la persona: " + e.getMessage(), e);
+        }
+    }
 
     @Override
     public boolean existsByDocument(PersonDTO personDto) throws Exception {
@@ -21,18 +45,6 @@ public class Personimplementation implements PersonDao {
         preparedStatement.close();
         return exists;
 
-    }
-
-    @Override
-    public void createPerson(PersonDTO personDto) throws Exception {
-        Person person = Helpers.parse(personDto);
-        String query = "INSERT INTO PERSON(NAME,DOCUMENT,CELPHONE) VALUES (?,?,?) ";
-        PreparedStatement preparedStatement = MYSQLConnection.getConnection().prepareStatement(query);
-        preparedStatement.setString(1, person.getName());
-        preparedStatement.setLong(2, person.getCedula());
-        preparedStatement.setLong(3, person.getCelphone());
-        preparedStatement.execute();
-        preparedStatement.close();
     }
 
     @Override

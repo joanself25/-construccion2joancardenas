@@ -18,7 +18,12 @@ public class PartnerDTO {
     private double fundsmoney;
     private String typeSuscription;
     private Date dateCreated;
-    
+    private String vipRequestStatus; // Estado de solicitud vip
+    private Date vipRequestDate;    // Fecha de solicitud vip
+    private String promotionRequestStatus; // Solicitud de promoción Estado
+    private Date promotionRequestDate; // Solicitud de promoción Fecha
+    private String lowRequestStatus; // Estado de solicitud baja
+    private Date lowRequestDate; // fecha de solicitud baja
 
     public double getFundsmoney() {
         return fundsmoney;
@@ -27,11 +32,6 @@ public class PartnerDTO {
     public void setFundsmoney(double fundsmoney) {
         this.fundsmoney = fundsmoney;
     }
-
-    
-
-    
-    
 
     public PartnerDTO() {
 
@@ -66,7 +66,7 @@ public class PartnerDTO {
     }
 
     public void setTypeSuscription(String type) {
-        this.typeSuscription= type;
+        this.typeSuscription = type;
     }
 
     public Date getDateCreated() {
@@ -77,18 +77,52 @@ public class PartnerDTO {
         this.dateCreated = dateCreated;
     }
 
-    public void setVipRequestStatus(String rechazada) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    public String getVipRequestStatus() {
+        return vipRequestStatus;
     }
 
-    public void setVipRequestDate(Date date) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    public void setVipRequestStatus(String vipRequestStatus) {
+        this.vipRequestStatus = vipRequestStatus;
     }
 
-    public String getVipRequestDate() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    public Date getVipRequestDate() {
+        return vipRequestDate;
     }
 
-   
-   
+    public void setVipRequestDate(Date vipRequestDate) {
+        this.vipRequestDate = vipRequestDate;
+    }
+
+    public String getPromotionRequestStatus() {
+        return promotionRequestStatus;
+    }
+
+    public void setPromotionRequestStatus(String promotionRequestStatus) {
+        this.promotionRequestStatus = promotionRequestStatus;
+    }
+
+    public Date getPromotionRequestDate() {
+        return promotionRequestDate;
+    }
+
+    public void setPromotionRequestDate(Date promotionRequestDate) {
+        this.promotionRequestDate = promotionRequestDate;
+    }
+
+    public String getLowRequestStatus() {
+        return lowRequestStatus;
+    }
+
+    public void setLowRequestStatus(String lowRequestStatus) {
+        this.lowRequestStatus = lowRequestStatus;
+    }
+
+    public Date getLowRequestDate() {
+        return lowRequestDate;
+    }
+
+    public void setLowRequestDate(Date lowRequestDate) {
+        this.lowRequestDate = lowRequestDate;
+    }
+
 }

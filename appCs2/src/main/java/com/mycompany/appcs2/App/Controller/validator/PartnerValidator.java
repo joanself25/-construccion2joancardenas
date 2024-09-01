@@ -3,7 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.mycompany.appcs2.App.Controller.validator;
+package com.mycompany.appcs2.App.Controller.Validator;
+
+import com.mycompany.appcs2.App.Controller.Validator.CommonsValidator;
 
 /**
  *
@@ -15,9 +17,9 @@ public class PartnerValidator extends CommonsValidator {
         super();
     }
 
-    public long validid(String id) throws Exception {
+    public long valiedId(String id) throws Exception {
+        return super.isValidlong("el id del socio  ", id);
 
-        return super.isValidlong("id del socio ", id);
     }
 
     public long funds(String funds) throws Exception {

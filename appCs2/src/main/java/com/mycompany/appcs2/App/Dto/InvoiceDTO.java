@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.mycompany.appcs2.App.Dto;
 
 import java.util.Date;
@@ -20,6 +15,15 @@ public class InvoiceDTO {
     private double amount;
     private boolean status;
     private String Statuses;
+    private GuestDTO guestid;
+
+    public GuestDTO getGuestid() {
+        return guestid;
+    }
+
+    public void setGuestid(GuestDTO guestid) {
+        this.guestid = guestid;
+    }
 
     public String getStatuses() {
         return Statuses;
@@ -80,4 +84,5 @@ public class InvoiceDTO {
     public void setStatus(boolean status) {
         this.status = status;
     }
+
 }

@@ -3,7 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.mycompany.appcs2.App.Controller.validator;
+package com.mycompany.appcs2.App.Controller.Validator;
+
+import com.mycompany.appcs2.App.Controller.Validator.CommonsValidator;
 
 /**
  *
@@ -32,7 +34,7 @@ public class PersonValidator extends CommonsValidator {
     }
 
     public long validCelphone(String celu) throws Exception {
-        return super.isValidlong("este es el celular de la persona ", celu);
+        return super.isValidlong("este  es el celular de la persona ", celu);
     }
 
 }

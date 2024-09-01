@@ -14,20 +14,19 @@ import java.sql.SQLException;
  */
 public class MYSQLConnection {
 
-    private static final String URL = "jdbc:mysql://localhost:3306/club";
+    private static final String URL = "jdbc:mysql://localhost:3306/CLUB";
     private static final String USER = "root";
     private static final String PASSWORD = "";
 
-    public static Connection getConnection() {
-        Connection connection = null;
+    public static Connection getConnection() throws SQLException {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
-            connection = DriverManager.getConnection(URL, USER, PASSWORD);
-            System.out.println("Conexión exitosa");
-        } catch (ClassNotFoundException | SQLException e) {
-            e.printStackTrace();
+            return DriverManager.getConnection(URL, USER, PASSWORD); //BUSQUE Y CAMBIE LA CONECCION QUE SE ADAPTE 
+            // PARA EL DESARROLLO DE MI CODIGO
+            // CON EL RETURN DRIVEMANAGER
+           
+        } catch (ClassNotFoundException e) {
+            throw new SQLException("MySQL JDBC Driver not found", e);
         }
-        return connection;
     }
-
 }
