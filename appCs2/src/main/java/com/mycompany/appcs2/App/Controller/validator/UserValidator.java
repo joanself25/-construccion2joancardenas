@@ -3,7 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.mycompany.appcs2.App.Controller.validator;
+package com.mycompany.appcs2.App.Controller.Validator;
+
+import com.mycompany.appcs2.App.Controller.Validator.CommonsValidator;
 
 /**
  *
