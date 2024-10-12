@@ -23,7 +23,7 @@ import org.springframework.stereotype.Controller;
 
 // Opciones de Pago: Inmediato o pendiente para socios. 
 // Pagos Pendientes por Invitados: Deben ser cubiertos por el socio. 
-//
+
 //Promoción a VIP: Generación y aprobación de lista de candidatos,notificación manual a los socios sobre el resultado.
 @Controller
 @Getter
@@ -327,20 +327,7 @@ public class PartnerController implements ControllerInterface {
         }
     }
 
-    private void uploadFunds() throws Exception {
-        System.out.println("Ingrese la cantidad de fondos a subir:");
-        double amount = Double.parseDouble(Utils.getReader().nextLine());
-        ClubService service = new ClubService();
-        service.uploadFunds(ClubService.user.getId(), amount);
-        System.out.println("Fondos subidos exitosamente.");
-    }
-
-    private void managementFunds() throws Exception {
-        System.out.println("  cuanta plata quieres agregar ");
-        long funds = partnervalidator.funds(Utils.getReader().nextLine());
-        PartnerDTO partnerdto = new PartnerDTO();
-        partnerdto.setfundsMoney(funds);
-
-    }
+   
+   
 
 }

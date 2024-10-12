@@ -61,32 +61,7 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
     public static UserDTO user;
 
     //Gestión de fondos
-    @Override
-    public void managementFunds(PartnerDTO partnerDto, double Amount) throws Exception {
-        double currentFunds = partnerDto.getfundsMoney();
-        double newFunds = currentFunds + Amount;
-        double maxFunds = partnerDto.getTypeSuscription().equalsIgnoreCase("vip") ? 5000000 : 1000000;
-
-        if (newFunds > maxFunds) {
-            throw new Exception("El monto excede el límite máximo para el tipo de suscripción.");
-        }
-
-        partnerDto.setfundsMoney(newFunds);
-        partnerDao.PartnerFunds(partnerDto);
-
-        // Pago automático de facturas pendientes
-        List<InvoiceDTO> pendingInvoices = partnerDao.getPendingInvoices(partnerDto.getId());
-        for (InvoiceDTO invoice : pendingInvoices) {
-            if (newFunds >= invoice.getAmount()) {
-                newFunds -= invoice.getAmount();
-                partnerDao.payInvoice(invoice.getId());
-                partnerDto.setfundsMoney(newFunds);
-                partnerDao.PartnerFunds(partnerDto);
-            } else {
-                break;
-            }
-        }
-    }
+   
 
     @Override
 //Solicitud de suscripción VIP

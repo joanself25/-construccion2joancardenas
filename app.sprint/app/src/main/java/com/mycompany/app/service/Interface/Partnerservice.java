@@ -15,7 +15,7 @@ import java.util.List;
 
 public interface Partnerservice {
 
-    public void managementFunds(PartnerDTO partnerDto, double Amount) throws Exception;
+ 
 
     public void lowPartner(long partnerId) throws Exception;
 
