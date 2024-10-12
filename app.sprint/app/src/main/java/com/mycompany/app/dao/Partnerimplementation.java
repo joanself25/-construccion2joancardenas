@@ -128,7 +128,7 @@ public class Partnerimplementation implements PartnerDao {
         System.out.println("Socio con ID " + partnerId + " ha sido dado de baja exitosamente.");
     }
 
-    //Hay ranuras VIP disponibles
+    //Revisar si hay  ranuras VIP disponibles
     @Override
     public boolean isVIPSlotAvailable() throws Exception {
         long vipCount = partnerRepository.countByTypeSuscription("VIP");
