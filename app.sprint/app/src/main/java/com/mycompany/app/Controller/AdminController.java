@@ -126,7 +126,7 @@ public class AdminController implements ControllerInterface {
 
         // Inicializar y ejecutar el PartnerController
       try {
-            PartnerController  partnerController = new PartnerController();
+          System.out.println(" socio creado exitosamente");
             partnerController.session();
         } catch (Exception e) {
             System.out.println("Error al iniciar sesión como invitado: " + e.getMessage());

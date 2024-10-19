@@ -49,7 +49,13 @@ public class Invoiceimplementation implements InvoiceDao {
     }
 
     @Override
+    // el metodo devuelve una lista de objetos  invoiceDTO
+    // recibe un  parametro de tipo long partenerid
+    
     public List<InvoiceDTO> getInvoicesPartner(long partnerId) throws Exception {
+        //creo una variable de tipo lista con un ibjeto invoices donde a esta variable 
+        //por medio de un invoices repository me va a buscar las facturas que le pertenecen 
+        //al id del socio que se busca
         List<Invoice> invoices = invoiceRepository.findByPartnerId_Id(partnerId);
         List<InvoiceDTO> invoiceDTOs = new ArrayList<>();
         for (Invoice invoice : invoices) {

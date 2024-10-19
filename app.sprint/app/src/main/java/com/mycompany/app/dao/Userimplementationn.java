@@ -47,8 +47,8 @@ public class Userimplementationn implements UserDao {
 
     @Override
     public void updateUser(UserDTO userDto) throws Exception {
-        //Este método del repositorio verifica si existe un usuario con el ID especificado(existById)
-        // la línea está comprobando si no existe un usuario con el ID indicado.
+       //Esta línea verifica si el usuario con el ID especificado en el userDto
+       //existe en la base de datos.
         if (!userRepository.existsById(userDto.getId())) {
             throw new Exception("User no encontrado con id : " + userDto.getId());
         }

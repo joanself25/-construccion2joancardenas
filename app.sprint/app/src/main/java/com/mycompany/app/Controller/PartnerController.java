@@ -23,7 +23,6 @@ import org.springframework.stereotype.Controller;
 
 // Opciones de Pago: Inmediato o pendiente para socios. 
 // Pagos Pendientes por Invitados: Deben ser cubiertos por el socio. 
-
 //Promoción a VIP: Generación y aprobación de lista de candidatos,notificación manual a los socios sobre el resultado.
 @Controller
 @Getter
@@ -52,20 +51,16 @@ public class PartnerController implements ControllerInterface {
 
     @Autowired
     private ClubService service;
-    
+
     @Autowired
     private GuestController guestController;
-    
+
     @Autowired
     private ClubService clubService;
-
 
     private PartnerDTO currentPartner;
 
     private UserDTO currentUser;
-    
-    
-    
 
     private static final String MENU = "ingrese la opcion que desea ejecutar:  \n 1. crear invitado \n 2. Activar invitado \n 3. desactivar invitados \n 4. solicitar baja \n 5. solicitar promocion \n 6.crear factura de socio \n 7. pagar facturas pendientes   \n 8. Cerrar sesión.";
 //7.gestion de fondos 
@@ -238,13 +233,11 @@ public class PartnerController implements ControllerInterface {
 
         try {
             this.service.createGuest(userDTO, userId, personDTO);
-            System.out.println("Invitado creado exitosamente.");
         } catch (Exception e) {
             System.out.println("Error al crear el invitado: " + e.getMessage());
         }
-         try {
-            GuestController guestController = new GuestController();
-            guestController.session();
+        try {
+
         } catch (Exception e) {
             System.out.println("Error al iniciar sesión como invitado: " + e.getMessage());
         }
@@ -258,8 +251,8 @@ public class PartnerController implements ControllerInterface {
             service.activateGuest(guestId);
             System.out.println("Invitado activado exitosamente.");
         } catch (Exception e) {
-            System.out.println("Error al activar el invitado " );
-           
+            System.out.println("Error al activar el invitado ");
+
         }
     }
 
@@ -272,7 +265,7 @@ public class PartnerController implements ControllerInterface {
             System.out.println("Invitado desactivado exitosamente.");
         } catch (Exception e) {
             System.out.println("Error al desactivar el invitado");
-            
+
         }
     }
 
@@ -288,11 +281,9 @@ public class PartnerController implements ControllerInterface {
 
             service.lowPartner(userId);
 
-            System.out.println("Se ha dado de baja exitosamente. Todos sus datos han sido eliminados.");
-
             service.logout();
         } catch (Exception e) {
-            System.out.println("Error al darse de baja: " + e.getMessage());
+            System.out.println("Error al darse de baja: "+ e.getMessage());
         }
     }
     //Solicitud de promoción
@@ -322,12 +313,9 @@ public class PartnerController implements ControllerInterface {
             service.payInvoices(userId);
 
         } catch (Exception e) {
-            System.out.println("Error al procesar el pago: " + e.getMessage());
+            System.out.println("Error al procesar el pago");
             throw e;
         }
     }
-
-   
-   
 
 }

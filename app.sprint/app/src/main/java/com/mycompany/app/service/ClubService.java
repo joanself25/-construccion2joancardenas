@@ -347,8 +347,7 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
         List<InvoiceDTO> unpaidInvoices = invoiceDao.UnpaidInvoicesPartner(partnerId);
         if (!unpaidInvoices.isEmpty()) {
             throw new Exception("""
-                                ===No se puede procesar la eliminación de la cuenta
-                                El socio tiene facturas pendientes de pago. ===""");
+                                === El socio tiene facturas pendientes de pago. ===""");
 
         }
 
@@ -383,7 +382,7 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
             personDao.deletePerson(personToDelete);
 
             System.out.println("La cuenta del socio con ID " + " --" + partnerId + "--"
-                    + " se eliminó correctamente. Se eliminaron todos los datos asociados.");
+                    + " se eliminó correctamente.");
         } catch (Exception e) {
             throw new Exception("==Se produjo un error al procesar la eliminación de la cuenta del socio con ID "
                     + partnerId + ": " + e.getMessage() + " ==");

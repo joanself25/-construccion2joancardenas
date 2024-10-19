@@ -54,10 +54,13 @@ public class Partnerimplementation implements PartnerDao {
 
     @Override
     public void PartnerFunds(PartnerDTO partnerDto) throws Exception {
+        //Esta línea busca al socio en la base de datos utilizando su ID.
+        //El resultado se almacena en una variable llamada optionalPartner de tipo Optional<Partner>.
         Optional<Partner> optionalPartner = partnerRepository.findById(partnerDto.getId());
         if (!optionalPartner.isPresent()) {
             throw new Exception("Partner not found with id: " + partnerDto.getId());
         }
+        // si la condicion se cumple 
         Partner partner = optionalPartner.get();
         partner.setFundsMoney(partnerDto.getfundsMoney());
         partnerRepository.save(partner);
