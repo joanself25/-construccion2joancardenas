@@ -10,8 +10,13 @@ import com.mycompany.app.Dto.PersonDTO;
 import com.mycompany.app.Dto.UserDTO;
 import java.util.List;
 
-
 public interface GuestDao {
+
+    List<InvoiceDTO> getGuestPendingInvoices(long guestId) throws Exception;
+
+    List<InvoiceDTO> getGuestPaidInvoices(long guestId) throws Exception;
+
+    GuestDTO findGuestByUserId(long userId) throws Exception;
 
     public GuestDTO findGuestById(long guestid) throws Exception;
 
@@ -19,11 +24,8 @@ public interface GuestDao {
 
     public void deleteGuest(long guestId) throws Exception;
 
-  public void createGuest(GuestDTO guestDTO) throws Exception;
+    public void createGuest(GuestDTO guestDTO) throws Exception;
 
-    public GuestDTO findGuestByUserId(long userId) throws Exception;
+    public List<GuestDTO> findGuestsByPartnerId(long id) throws Exception;
 
-    public List<GuestDTO> findGuestsByPartnerId(long id)throws Exception ;
-
-   
 }

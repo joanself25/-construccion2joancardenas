@@ -18,13 +18,15 @@ public interface Adminservice {
 
     public void createPartner(UserDTO userDTO, PersonDTO personDTO) throws Exception;
 
-    public void createGuest(UserDTO userDTO, long userId, PersonDTO personDTO) throws Exception;
-
     public List<PartnerDTO> getPendingVIPRequests() throws Exception;
 
     public double getTotalPaidInvoices(long id) throws Exception;
 
     List<InvoiceDTO> getPartnerInvoices(long partnerId) throws Exception;
+
+    public List<InvoiceDTO> getGuestPendingInvoice(long guestId) throws Exception;
+
+    public List<InvoiceDTO> getGuestPaidInvoices(long guestId) throws Exception;
 
     public List<InvoiceDTO> getGuestInvoices(long guestId) throws Exception;
 
@@ -39,6 +41,8 @@ public interface Adminservice {
     public List<InvoiceDTO> PaidInvoices(long partnerId) throws Exception;
 
     public List<InvoiceDTO> getPendingInvoices(long partnerId) throws Exception;
+
+    public double getTotalInvoicesAmount(long partnerId) throws Exception;
 
     public List<InvoiceDTO> getPaidInvoices(long partnerId) throws Exception;
 

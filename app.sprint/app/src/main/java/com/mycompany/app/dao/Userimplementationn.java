@@ -42,6 +42,7 @@ public class Userimplementationn implements UserDao {
     @Override
     public UserDTO findUserById(long userId) throws Exception {
         User user = userRepository.findUserById(userId);
+        System.out.println(user.toString());
         return Helpers.parse(user);
     }
 

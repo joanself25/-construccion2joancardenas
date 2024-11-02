@@ -11,12 +11,16 @@ package com.mycompany.app.dao;
  */
 import com.mycompany.app.dao.interfaces.GuestDao;
 import com.mycompany.app.Dto.GuestDTO;
+import com.mycompany.app.Dto.InvoiceDTO;
 import com.mycompany.app.Helpers.Helpers;
 import com.mycompany.app.dao.repositories.GuestRepository;
+import com.mycompany.app.dao.repositories.InvoiceRepository;
 import com.mycompany.app.model.Guest;
+import com.mycompany.app.model.Invoice;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -33,6 +37,9 @@ public class GuestImplementation implements GuestDao {
     @Autowired
     private GuestRepository guestRepository;
 
+    @Autowired
+    private InvoiceRepository invoiceRepository;
+
     @Override
     public void createGuest(GuestDTO guestDTO) throws Exception {
         if (guestDTO == null) {
@@ -41,6 +48,58 @@ public class GuestImplementation implements GuestDao {
         Guest guest = Helpers.parse(guestDTO);
         guest = guestRepository.save(guest);
         guestDTO.setId(guest.getId());
+    }
+
+    @Override
+    public List<InvoiceDTO> getGuestPendingInvoices(long guestId) throws Exception {
+        if (guestId <= 0) {
+            throw new Exception("ID de invitado inválido: " + guestId);
+        }
+
+        Optional<Guest> optionalGuest = guestRepository.findById(guestId);
+        if (!optionalGuest.isPresent()) {
+            throw new Exception("Invitado no encontrado con ID: " + guestId);
+        }
+
+        Guest guest = optionalGuest.get();
+        if (guest.getUserId() == null || guest.getUserId().getPersonId() == null) {
+            throw new Exception("El invitado no tiene información de usuario asociada");
+        }
+
+        // Obtener las facturas usando el ID de la persona asociada al usuario
+        List<Invoice> pendingInvoices = invoiceRepository.findByPersonId_IdAndStatusFalse(
+                guest.getUserId().getPersonId().getId()
+        );
+
+        return pendingInvoices.stream()
+                .map(Helpers::parse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<InvoiceDTO> getGuestPaidInvoices(long guestId) throws Exception {
+        if (guestId <= 0) {
+            throw new Exception("ID de invitado inválido: " + guestId);
+        }
+
+        Optional<Guest> optionalGuest = guestRepository.findById(guestId);
+        if (!optionalGuest.isPresent()) {
+            throw new Exception("Invitado no encontrado con ID: " + guestId);
+        }
+
+        Guest guest = optionalGuest.get();
+        if (guest.getUserId() == null || guest.getUserId().getPersonId() == null) {
+            throw new Exception("El invitado no tiene información de usuario asociada");
+        }
+
+        // Obtener las facturas pagadas usando el ID de la persona
+        List<Invoice> paidInvoices = invoiceRepository.findByPersonId_IdAndStatusTrue(
+                guest.getUserId().getPersonId().getId()
+        );
+
+        return paidInvoices.stream()
+                .map(Helpers::parse)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -113,7 +172,7 @@ public class GuestImplementation implements GuestDao {
             return Helpers.parse(optionalGuest.get());
         } catch (Exception e) {
             // Log del error para debugging
-            throw new Exception("Error al buscar el invitado: " + e.getMessage());
+            throw new Exception( e.getMessage());
         }
     }
 }

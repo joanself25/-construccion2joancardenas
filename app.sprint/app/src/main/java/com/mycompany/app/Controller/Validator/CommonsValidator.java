@@ -12,10 +12,10 @@ package com.mycompany.app.Controller.Validator;
 public abstract class CommonsValidator {
 
     public void isValidString(String element, String value) throws Exception {
-		if (value.equals("")) {
-			throw new Exception(element + " no puede ser un valor vacio");
-		}
-	}
+        if (value == null || value.equals("")) {
+            throw new Exception(element + " no puede ser un valor vacio");
+        }
+    }
 
     public int isValidinteger(String element, String value) throws Exception {
         isValidString(element, value);
@@ -23,7 +23,7 @@ public abstract class CommonsValidator {
             return Integer.parseInt(value);
         } catch (Exception e) {
             System.out.println("    ");
-            throw new Exception(element +   " debe ser un valor valido. ");
+            throw new Exception(element + " debe ser un valor valido. ");
         }
     }
 
@@ -32,8 +32,8 @@ public abstract class CommonsValidator {
         try {
             return Long.parseLong(value);
         } catch (NumberFormatException e) {
-            System.out.println("    ");
-            throw new Exception(element +      " debe ser un valor valido. ");
+            System.out.println("  ");
+            throw new Exception(element + " debe ser un valor valido. ");
         }
     }
 
@@ -43,7 +43,7 @@ public abstract class CommonsValidator {
             return Double.parseDouble(value);
         } catch (NumberFormatException e) {
             System.out.println("    ");
-            throw new Exception(element +           " debe ser un valor valido. ");
+            throw new Exception(element + " debe ser un valor valido. ");
         }
     }
 

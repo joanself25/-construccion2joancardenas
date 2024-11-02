@@ -1,16 +1,26 @@
 package com.mycompany.app.Controller;
 
+import com.mycompany.app.Controller.Request.CreateInvoicesDetailsRequest;
+import com.mycompany.app.Controller.Request.CreateInvoicesRequest;
+import com.mycompany.app.Controller.Request.CreateUserRequest;
+import com.mycompany.app.Controller.Request.GuestStatusRequest;
+import com.mycompany.app.Controller.Request.LowPartnerRequest;
+import com.mycompany.app.Controller.Request.ManagementFundsRequest;
+import com.mycompany.app.Controller.Request.PayInvoicesRequest;
+import com.mycompany.app.Controller.Request.RequestPromotion;
 import com.mycompany.app.Controller.Validator.PartnerValidator;
 import com.mycompany.app.Controller.Validator.GuestValidator;
 import com.mycompany.app.Controller.Validator.InvoiceDetailValidator;
 import com.mycompany.app.Controller.Validator.PersonValidator;
 import com.mycompany.app.Controller.Validator.InvoiceValidator;
 import com.mycompany.app.Controller.Validator.UserValidator;
+import com.mycompany.app.Dto.GuestDTO;
 import com.mycompany.app.Dto.PartnerDTO;
 import com.mycompany.app.Dto.InvoiceDTO;
 import com.mycompany.app.Dto.InvoiceDetailDTO;
 import com.mycompany.app.Dto.PersonDTO;
 import com.mycompany.app.Dto.UserDTO;
+import com.mycompany.app.dao.interfaces.UserDao;
 import com.mycompany.app.service.ClubService;
 import java.sql.Date;
 import java.util.ArrayList;
@@ -19,7 +29,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 // Opciones de Pago: Inmediato o pendiente para socios. 
 // Pagos Pendientes por Invitados: Deben ser cubiertos por el socio. 
@@ -56,7 +73,7 @@ public class PartnerController implements ControllerInterface {
     private GuestController guestController;
 
     @Autowired
-    private ClubService clubService;
+    private UserDao userDao;
 
     private PartnerDTO currentPartner;
 
@@ -67,255 +84,253 @@ public class PartnerController implements ControllerInterface {
 
     @Override
     public void session() throws Exception {
-        boolean session = true;
-        while (session) {
-            session = partner();
-        }
+
     }
 
-    private boolean partner() {
+    @PostMapping("/invoicespartner")
+    private ResponseEntity<String> createInvoicePartner(@RequestBody CreateInvoicesRequest request) throws Exception {
         try {
-            System.out.println(MENU);
-            String option = Utils.getReader().nextLine();
-            return options(option);
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            return true;
-        }
-    }
+            // Validate partnerId
+            int partnerId = partnervalidator.isValidinteger("id del socio", request.getPartnerId());
 
-    private boolean options(String option) throws Exception {
-        switch (option) {
-
-            case "1": {
-                this.createGuest();
-                return true;
-            }
-            case "2": {
-                this.activateGuest();
-                return true;
-            }
-            case "3": {
-                this.desactivateGuest();
-                return true;
-            }
-            case "4": {
-                this.lowPartner();
-                return true;
-            }
-
-            case "5": {
-                this.requestPromotion();
-                return true;
-            }
-            case "6": {
-                this.createInvoicePartner();
-                return true;
-            }
-            /*case "7": {
-                this.managementFunds();
-                return true;
-            }
-             */
-            case "7": {
-                this.payInvoices();
-                return true;
-            }
-
-            case "8": {
-                System.out.println("Se ha cerrado sesión");
-                return false;
-
-            }
-
-            default: {
-                System.out.println("ingrese una opcion valida");
-                return true;
-            }
-        }
-
-    }
-
-    private void createInvoicePartner() throws Exception {
-        try {
-            // Verificar que hay un usuario logueado
-            if (ClubService.user == null) {
-                throw new Exception("No hay un usuario autenticado actualmente.");
-            }
-
-            // Obtener el socio actual usando el ID del usuario logueado
-            PartnerDTO partnerDto = service.findPartnerByUserId(ClubService.user.getId());
+            // Find partner
+            PartnerDTO partnerDto = service.findPartnerById(partnerId);
             if (partnerDto == null) {
-                throw new Exception("No se encontró un socio asociado al usuario actual.");
+                return new ResponseEntity<>("No se encontró el socio con el ID proporcionado", HttpStatus.NOT_FOUND);
             }
 
-            System.out.print("Cantidad de items de la factura :");
-            int item = invoicedetailvalidator.validNumItems(Utils.getReader().nextLine());
+            // Validate partner has associated user and person
+            if (partnerDto.getUserId() == null || partnerDto.getUserId().getPersonId() == null) {
+                return new ResponseEntity<>("El socio no tiene datos de usuario o persona asociados", HttpStatus.BAD_REQUEST);
+            }
 
-            // Crear la factura con todos los datos necesarios
+            // Create invoice
             InvoiceDTO invoiceDto = new InvoiceDTO();
             invoiceDto.setCreationDate(new Date(System.currentTimeMillis()));
             invoiceDto.setStatus(false);
             invoiceDto.setPartnerId(partnerDto);
-            // Asegurarse de que el PersonDTO está establecido
             invoiceDto.setPersonId(partnerDto.getUserId().getPersonId());
 
+            // Process invoice details
             List<InvoiceDetailDTO> details = new ArrayList<>();
-            double total = 0;
+            double total = 0.0;
 
-            for (int i = 1; i <= item; i++) {
-                InvoiceDetailDTO invoiceDetailDto = new InvoiceDetailDTO();
-                invoiceDetailDto.setItem(i);
-
-                System.out.print("Ingrese la descripción del item " + i + " :");
-                String description = Utils.getReader().nextLine();
-                invoiceDetailDto.setDescription(description);
-
-                System.out.print("Ingrese el valor del item   " + i + " :");
-                double value = invoicedetailvalidator.validValueItems(Utils.getReader().nextLine());
-                invoiceDetailDto.setAmount(value);
-
-                // Establecer la referencia a la factura en el detalle
-                invoiceDetailDto.setInvoiceId(invoiceDto);
-
-                total += value;
-                details.add(invoiceDetailDto);
+            if (request.getDetails() == null || request.getDetails().isEmpty()) {
+                return new ResponseEntity<>("Debe incluir al menos un detalle en la factura", HttpStatus.BAD_REQUEST);
             }
 
-            // Establecer el monto total en la factura
+            for (CreateInvoicesDetailsRequest detail : request.getDetails()) {
+                try {
+                    // Validate item - convert from String to integer
+                    int itemNumber = invoicedetailvalidator.isValidinteger("número de item", detail.getItem());
+
+                    // Validate description
+                    String description = detail.getDescription();
+                    invoicedetailvalidator.validDescripcion(description);
+
+                    // Validate amount - convert from String to double
+                    double amount;
+                    try {
+                        amount = Double.parseDouble(detail.getAmount());
+                        if (amount <= 0) {
+                            return new ResponseEntity<>("El valor del item debe ser mayor a 0", HttpStatus.BAD_REQUEST);
+                        }
+                    } catch (NumberFormatException e) {
+                        return new ResponseEntity<>("El valor del item '" + detail.getAmount() + "' no es un número válido", HttpStatus.BAD_REQUEST);
+                    }
+
+                    InvoiceDetailDTO invoiceDetailDto = new InvoiceDetailDTO();
+                    invoiceDetailDto.setItem(itemNumber);
+                    invoiceDetailDto.setDescription(description);
+                    invoiceDetailDto.setAmount(amount);
+                    invoiceDetailDto.setInvoiceId(invoiceDto);
+
+                    total += amount;
+                    details.add(invoiceDetailDto);
+                } catch (Exception e) {
+                    return new ResponseEntity<>("Error validando el item: " + e.getMessage(), HttpStatus.BAD_REQUEST);
+                }
+            }
+
             invoiceDto.setAmount(total);
 
-            // Crear la factura con sus detalles
+            // Save invoice and details
             service.createInvoicePartner(invoiceDto, details);
-            System.out.println("Factura creada exitosamente por un total de: $" + total);
+            return new ResponseEntity<>("Factura creada exitosamente. Total: " + total, HttpStatus.OK);
 
         } catch (Exception e) {
-            System.out.println("Error al crear la factura: " + e.getMessage());
-            throw e;
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
-    private void createGuest() throws Exception {
-        System.out.print("Ingrese el nombre del invitado: ");
-        String name = Utils.getReader().nextLine();
-        personvalidator.validName(name);
-
-        System.out.print(" ingrese la cedula del invitado: ");
-        long cc = personvalidator.validDocument(Utils.getReader().nextLine());
-
-        System.out.print("Ingrese el número de celular del invitado: ");
-        long cel = personvalidator.validCelphone(Utils.getReader().nextLine());
-
-        System.out.print("Ingrese el nombre de usuario del invitado: ");
-        String userName = Utils.getReader().nextLine();
-        uservalidator.validUserName(userName);
-
-        System.out.print("Ingrese la contraseña:");
-        String password = Utils.getReader().nextLine();
-        uservalidator.validPassword(password);
-
-        PersonDTO personDTO = new PersonDTO();
-        personDTO.setName(name);
-        personDTO.setCelphone(cel);
-        personDTO.setDocument(cc);
-
-        UserDTO userDTO = new UserDTO();
-        userDTO.setPersonId(personDTO);
-        userDTO.setUsername(userName);
-        userDTO.setPassword(password);
-        userDTO.setRol("invitado");
-
-        if (ClubService.user == null) {
-            throw new Exception("No hay un usuario autenticado actualmente.");
-        }
-
-        long userId = ClubService.user.getId();
-
+    @PostMapping("/guest")
+    private ResponseEntity createGuest(@RequestBody CreateUserRequest request) throws Exception {
         try {
-            this.service.createGuest(userDTO, userId, personDTO);
-        } catch (Exception e) {
-            System.out.println("Error al crear el invitado: " + e.getMessage());
-        }
-        try {
+            String name = request.getName();
+            personvalidator.validName(name);
+
+            long cc = personvalidator.validDocument(request.getDocument());
+
+            long cel = personvalidator.validCelphone(request.getCellphone());
+
+            String userName = request.getUsername();
+            uservalidator.validUserName(userName);
+
+            String password = request.getPassword();
+            uservalidator.validPassword(password);
+
+            PersonDTO personDTO = new PersonDTO();
+            personDTO.setName(name);
+            personDTO.setCelphone(cel);
+            personDTO.setDocument(cc);
+
+            UserDTO userDTO = new UserDTO();
+            userDTO.setPersonId(personDTO);
+            userDTO.setUsername(userName);
+            userDTO.setPassword(password);
+            userDTO.setRol("invitado");
+
+            PartnerDTO partnerDto = new PartnerDTO();
+            partnerDto.setId(partnervalidator.isValidinteger("id del socio", request.getPartnerId()));
+
+            GuestDTO guestDto = new GuestDTO();
+            guestDto.setUserId(userDTO);
+            guestDto.setStatus(false);
+            guestDto.setPartnerId(partnerDto);
+
+            this.service.createGuest(guestDto);
+
+            return new ResponseEntity<>("invitado creado exitosamente", HttpStatus.OK);
 
         } catch (Exception e) {
-            System.out.println("Error al iniciar sesión como invitado: " + e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
+
     }
 
-    private void activateGuest() throws Exception {
+    @PutMapping("/activateguest")
+    private ResponseEntity<String> activateGuest(@RequestBody GuestStatusRequest request) throws Exception {
         try {
-            System.out.print("Ingrese el ID del invitado a activar :");
-            long guestId = guestvalidator.validId(Utils.getReader().nextLine());
 
-            service.activateGuest(guestId);
-            System.out.println("Invitado activado exitosamente.");
+            // Validar y obtener el ID del invitado
+            long guestId = guestvalidator.validId(request.getGuestId());
+
+            // Obtener el ID del socio del request o del token de autenticación
+            long partnerId = request.getPartnerId(); // Asumiendo que agregas este campo al GuestStatusRequest
+
+            service.activateGuest(guestId, partnerId);
+
+            return new ResponseEntity<>("Invitado activado exitosamente", HttpStatus.OK);
         } catch (Exception e) {
-            System.out.println("Error al activar el invitado ");
-
-        }
-    }
-
-    private void desactivateGuest() throws Exception {
-        try {
-            System.out.print("Ingrese el ID del invitado a desactivar :");
-            long guestId = guestvalidator.validId(Utils.getReader().nextLine());
-
-            service.desactivateGuest(guestId);
-            System.out.println("Invitado desactivado exitosamente.");
-        } catch (Exception e) {
-            System.out.println("Error al desactivar el invitado");
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
 
         }
     }
 
-    private void lowPartner() throws Exception {
+    @PutMapping("/desactivateguest")
+    private ResponseEntity<String> desactivateGuest(@RequestBody GuestStatusRequest request) throws Exception {
         try {
-            long userId = ClubService.user.getId();
 
+            long guestId = guestvalidator.validId(request.getGuestId());
+            long partnerId = request.getPartnerId(); // Asumiendo que agregas este campo al GuestStatusRequest
+
+            service.desactivateGuest(guestId, partnerId);
+            return new ResponseEntity<>("Invitado desactivado exitosamente", HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+
+        }
+    }
+
+    @PutMapping("/lowpartner")
+    private ResponseEntity<String> lowPartner(@RequestBody LowPartnerRequest request) throws Exception {
+        try {
+            // Validate partnerId
+            long userId = partnervalidator.isValidlong("id del socio", request.getUserId());
+
+            // Find partner
             PartnerDTO partnerDTO = service.findPartnerByUserId(userId);
 
             if (partnerDTO == null) {
-                throw new Exception("No se encontró un socio asociado al usuario actual.");
+                return new ResponseEntity<>("No se encontró un socio con el ID proporcionado", HttpStatus.NOT_FOUND);
             }
 
             service.lowPartner(userId);
 
             service.logout();
+
+            return new ResponseEntity<>("Socio dado de baja exitosamente", HttpStatus.OK);
+
         } catch (Exception e) {
-            System.out.println("Error al darse de baja: "+ e.getMessage());
-        }
-    }
-    //Solicitud de promoción
-
-    private void requestPromotion() throws Exception {
-        System.out.println("¿Está seguro que desea solicitar una promoción VIP? (si/no): ");
-        String response = Utils.getReader().nextLine();
-        if (response.equalsIgnoreCase("si")) {
-            service.requestPromotion(ClubService.user.getId());
-            System.out.println("Solicitud de promoción enviada. Un administrador la revisará pronto.");
-        } else {
-            System.out.println("Operación cancelada.");
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
-    private void payInvoices() throws Exception {
+    @PostMapping("/requestpromotion")
+    private ResponseEntity<String> requestPromotion(@RequestBody RequestPromotion request) throws Exception {
         try {
-            // Verificar que hay un usuario logueado
-            if (ClubService.user == null) {
-                throw new Exception("No hay un usuario autenticado actualmente.");
+            // Validar y obtener el ID del usuario
+            long userId = partnervalidator.isValidlong("id del socio", request.getUserId());
+
+            // Llamar al servicio para procesar la solicitud de promoción
+            service.requestPromotion(userId);
+
+            return new ResponseEntity<>("Solicitud de promoción enviada. Un administrador la revisará pronto.", HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PutMapping("/payinvoices")
+    private ResponseEntity<String> payInvoices(@RequestBody PayInvoicesRequest request) throws Exception {
+        try {
+            // Verificar que el request no sea nulo y contenga un ID válido
+            if (request == null || request.getUserId() <= 0) {
+                throw new Exception("Solicitud inválida o ID de usuario no proporcionado");
             }
 
-            // Obtener el ID del usuario actual
-            long userId = ClubService.user.getId();
-
             // Llamar al servicio para procesar el pago
-            service.payInvoices(userId);
+            service.payInvoices(request.getUserId());
+
+            return new ResponseEntity<>("Pago procesado exitosamente", HttpStatus.OK);
 
         } catch (Exception e) {
-            System.out.println("Error al procesar el pago");
-            throw e;
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
+    @PostMapping("/funds")
+    private ResponseEntity<String> managementFunds(@RequestBody ManagementFundsRequest request) {
+        try {
+            // Validaciones previas
+            if (request == null) {
+                return new ResponseEntity<>("La solicitud no puede ser nula", HttpStatus.BAD_REQUEST);
+            }
+
+            if (request.getUserId() == null) {
+                return new ResponseEntity<>("El ID del usuario no puede ser nulo", HttpStatus.BAD_REQUEST);
+            }
+
+            if (request.getAmount() == null || request.getAmount() <= 0) {
+                return new ResponseEntity<>("El monto debe ser mayor a cero", HttpStatus.BAD_REQUEST);
+            }
+
+            // Validar que el usuario existe antes de procesar
+            UserDTO user = userDao.findUserById(request.getUserId());
+            if (user == null) {
+                return new ResponseEntity<>("Usuario no encontrado", HttpStatus.NOT_FOUND);
+            }
+
+            // Validar que el usuario tiene un PersonDTO válido
+           
+
+            // Llamada al servicio
+            service.uploadFunds(request.getUserId(), request.getAmount());
+
+            return new ResponseEntity<>("Fondos incrementados exitosamente por un valor de: " + request.getAmount(),
+                    HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
 }

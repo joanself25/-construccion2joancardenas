@@ -32,6 +32,7 @@ public class Invoiceimplementation implements InvoiceDao {
 
     @Autowired
     InvoiceRepository invoiceRepository;
+    
     @Autowired
     PartnerRepository partnerRepository;
 
@@ -73,6 +74,7 @@ public class Invoiceimplementation implements InvoiceDao {
         }
         return invoiceDTOs;
     }
+    
 
     @Override
     public InvoiceDTO findInvoiceById(long invoiceId) throws Exception {

@@ -1,5 +1,8 @@
 package com.mycompany.app.Controller;
 
+import com.mycompany.app.Controller.Request.CreateInvoicesDetailsRequest;
+import com.mycompany.app.Controller.Request.CreateInvoicesRequest;
+import com.mycompany.app.Controller.Request.ConvertGuesToPartnerRequest;
 import com.mycompany.app.Controller.Validator.GuestValidator;
 import java.sql.Date;
 import com.mycompany.app.Controller.Validator.PersonValidator;
@@ -12,12 +15,19 @@ import com.mycompany.app.Dto.GuestDTO;
 import com.mycompany.app.Dto.PartnerDTO;
 import com.mycompany.app.service.ClubService;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 @Controller
 @Getter
@@ -46,166 +56,128 @@ public class GuestController implements ControllerInterface {
     private static final String MENU = "Ingrese la opcion accion que desea hacer: \n 1. conversion de invitado a socio \n 2.historial factura  \n 3. crear factura de invitado   \n 4.cerrar sesion.";
 
     @Override
-
     public void session() throws Exception {
-        boolean session = true;
-        while (session) {
-            session = guestSessio();
-        }
 
     }
 
-    private boolean guestSessio() {
+    @PostMapping("/invoicesguest")
+    private ResponseEntity<String> createInvoiceGuest(@RequestBody CreateInvoicesRequest request) throws Exception {
         try {
-            System.out.println(MENU);
-            String option = Utils.getReader().nextLine();
-            return menu(option);
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            return true;
-        }
-    }
+            // Validate guestId
+            long userId = guesvalidator.isValidinteger("id del invitado", request.getUserId());
 
-    private boolean menu(String option) throws Exception {
-        switch (option) {
-            case "1": {
-                this.converGuestoSocios();
-                return true;
+            // Find guest
+            GuestDTO guestDto = service.findGuestByUserId(userId);
+            if (guestDto == null) {
+                throw new Exception("No se encontró ningún invitado con el ID: " + userId);
             }
-            /* case "2": {
-                this.makeConsumption();// Ver historial de facturas
-                return true;
-            }*/
+            // if (!guestDto.isStatus()) {
+            //    return new ResponseEntity<>("El invitado no está activo actualmente", HttpStatus.BAD_REQUEST);
+            //}
 
-            case "2": {
-                this.viewInvoiceGuestHistory();
-                return true;
-            }
-            case "3": {
-                this.createInvoiceGuest();
-                return true;
+            // Validate guest has associated user and person
+            if (guestDto.getUserId() == null || guestDto.getUserId().getPersonId() == null) {
+                return new ResponseEntity<>("El invitado no tiene datos de usuario o persona asociados", HttpStatus.BAD_REQUEST);
             }
 
-            case "4": {
-                System.out.println("Se ha cerrado sesión");
-                return false;
-
-            }
-
-            default: {
-                System.out.println("ingrese una opcion valida");
-                return true;
-            }
-        }
-
-    }
-
-    private void createInvoiceGuest() throws Exception {
-        try {
-            // Verificar que hay un usuario logueado y obtener su ID
-            if (ClubService.user == null) {
-                throw new Exception("No hay un usuario autenticado actualmente.");
-            }
-
-            long currentUserId = ClubService.user.getId();
-
-            // Obtener el guest actual usando el ID del usuario logueado
-            GuestDTO guestDto = null;
-            try {
-                guestDto = service.findGuestByUserId(currentUserId);
-                if (guestDto == null || guestDto.getUserId() == null) {
-                    throw new Exception("No se encontró un invitado válido asociado al usuario actual.");
-                }
-            } catch (Exception e) {
-                throw new Exception("Error al buscar el invitado: " + e.getMessage());
-            }
-
-            // Obtener y validar el partner asociado al guest
+            // Validate partner association
             PartnerDTO partnerDto = guestDto.getPartnerId();
             if (partnerDto == null) {
-                throw new Exception("No se encontró un socio asociado a este invitado.");
+                return new ResponseEntity<>("No se encontró un socio asociado a este invitado", HttpStatus.BAD_REQUEST);
             }
 
-            // Validar que el invitado esté activo
-            if (!guestDto.isStatus()) {
-                throw new Exception("El invitado no está activo actualmente.");
-            }
-
-            System.out.print("Cantidad de items de la factura: ");
-            int item = invoiceDetailValidator.validNumItems(Utils.getReader().nextLine());
-
-            // Crear la factura con todos los datos necesarios
+            // Create invoice
             InvoiceDTO invoiceDto = new InvoiceDTO();
             invoiceDto.setCreationDate(new Date(System.currentTimeMillis()));
             invoiceDto.setStatus(false);
             invoiceDto.setPartnerId(partnerDto);
             invoiceDto.setGuestid(guestDto);
-
-            // Asegurarse de que el PersonDTO está establecido correctamente
-            if (guestDto.getUserId().getPersonId() == null) {
-                throw new Exception("Error: No se encontró la información personal del invitado.");
-            }
             invoiceDto.setPersonId(guestDto.getUserId().getPersonId());
 
+            // Process invoice details
             List<InvoiceDetailDTO> details = new ArrayList<>();
-            double total = 0;
+            double total = 0.0;
 
-            for (int i = 1; i <= item; i++) {
-                InvoiceDetailDTO invoiceDetailDto = new InvoiceDetailDTO();
-                invoiceDetailDto.setItem(i);
+            if (request.getDetails() == null || request.getDetails().isEmpty()) {
+                return new ResponseEntity<>("Debe incluir al menos un detalle en la factura", HttpStatus.BAD_REQUEST);
+            }
 
-                System.out.print("Ingrese la descripción del item " + i + ": ");
-                String description = Utils.getReader().nextLine();
-                invoiceDetailDto.setDescription(description);
+            for (CreateInvoicesDetailsRequest detail : request.getDetails()) {
+                try {
+                    // Validate item number
+                    int itemNumber = invoiceDetailValidator.isValidinteger("número de item", detail.getItem());
 
-                System.out.print("Ingrese el valor del item " + i + ": ");
-                double value = invoiceDetailValidator.validValueItems(Utils.getReader().nextLine());
-                invoiceDetailDto.setAmount(value);
-                invoiceDetailDto.setInvoiceId(invoiceDto);
+                    // Validate description
+                    String description = detail.getDescription();
+                    invoiceDetailValidator.validDescripcion(description);
 
-                total += value;
-                details.add(invoiceDetailDto);
+                    // Validate amount
+                    double amount;
+                    try {
+                        amount = Double.parseDouble(detail.getAmount());
+                        if (amount <= 0) {
+                            return new ResponseEntity<>("El valor del item debe ser mayor a 0", HttpStatus.BAD_REQUEST);
+                        }
+                    } catch (NumberFormatException e) {
+                        return new ResponseEntity<>("El valor del item '" + detail.getAmount() + "' no es un número válido", HttpStatus.BAD_REQUEST);
+                    }
+
+                    InvoiceDetailDTO invoiceDetailDto = new InvoiceDetailDTO();
+                    invoiceDetailDto.setItem(itemNumber);
+                    invoiceDetailDto.setDescription(description);
+                    invoiceDetailDto.setAmount(amount);
+                    invoiceDetailDto.setInvoiceId(invoiceDto);
+
+                    total += amount;
+                    details.add(invoiceDetailDto);
+                } catch (Exception e) {
+                    return new ResponseEntity<>("Error validando el item: " + e.getMessage(), HttpStatus.BAD_REQUEST);
+                }
             }
 
             invoiceDto.setAmount(total);
 
-            // Crear la factura con sus detalles
+            // Save invoice and details
             service.createInvoiceGuest(invoiceDto, details);
-            System.out.println("Factura creada exitosamente por un total de: $" + total);
+            return new ResponseEntity<>("Factura de invitado creada exitosamente. Total: " + total, HttpStatus.OK);
 
         } catch (Exception e) {
-            System.out.println("Error al crear la factura: " + e.getMessage());
-            throw e;
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
-    private void viewInvoiceGuestHistory() throws Exception {
-        GuestDTO guestDto = service.findGuestByUserId(ClubService.user.getId());
-        List<InvoiceDTO> invoices = service.getGuestInvoices(guestDto.getId());
-        for (InvoiceDTO invoice : invoices) {
-            System.out.println("Invoice ID: " + invoice.getId() + ", Amount: " + invoice.getAmount() + ", Date: " + invoice.getCreationDate());
-        }
-    }
-
-    private void converGuestoSocios() throws Exception {
-        System.out.print("¿Está seguro que desea convertirse en socio? (si/no): ");
-        String confirmation = Utils.getReader().nextLine();
-
-        if (confirmation.equalsIgnoreCase("si")) {
-            long userId = ClubService.user.getId();
-            try {
-                this.service.convertGuestToPartner(userId);
-                System.out.println("¡Felicidades! Has sido convertido exitosamente a socio.");
-                System.out.println("Tipo de suscripción: Regular");
-            } catch (Exception e) {
-                System.out.println("\nNo se pudo completar la conversión a socio:");
-                System.out.println(e.getMessage());
+    @PutMapping("/convert-guest")
+    private ResponseEntity<?> convertGuestToPartner(@RequestBody ConvertGuesToPartnerRequest request) {
+        try {
+            // Validate request
+            if (request.getUserId() == null || request.getUserId() <= 0) {
+                return new ResponseEntity<>("Se requiere un ID de usuario válido", HttpStatus.BAD_REQUEST);
             }
-        } else {
-            System.out.println("Operación cancelada.");
+
+            // Attempt to convert guest to partner
+            service.convertGuestToPartner(request.getUserId());
+
+            // Create success response
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Conversión exitosa de invitado a socio");
+            response.put("userId", request.getUserId());
+            response.put("status", "SUCCESS");
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+
+        } catch (Exception e) {
+            // Create error response with detailed message
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Error en la conversión de invitado a socio");
+            errorResponse.put("error", e.getMessage());
+            errorResponse.put("userId", request.getUserId());
+            errorResponse.put("status", "ERROR");
+
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
 }
+
 
 /*private void makeConsumption() throws Exception {
         System.out.println("Bienvenido al área de consumo de la discoteca.");

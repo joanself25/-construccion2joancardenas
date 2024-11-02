@@ -47,7 +47,7 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
     private PersonDao personDao;
 
     @Autowired
-    private PartnerDao partnerDao;
+    public PartnerDao partnerDao;
 
     @Autowired
     private InvoiceDao invoiceDao;
@@ -61,8 +61,33 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
     public static UserDTO user;
 
     //Gestión de fondos
-   
+    /*@Override
+    public void managementFunds(PartnerDTO partnerDto, double Amount) throws Exception {
+        double currentFunds = partnerDto.getfundsMoney();
+        double newFunds = currentFunds + Amount;
+        double maxFunds = partnerDto.getTypeSuscription().equalsIgnoreCase("vip") ? 500000 : 100000;
 
+        if (newFunds > maxFunds) {
+            throw new Exception("El monto excede el límite máximo para el tipo de suscripción.");
+        }
+
+        partnerDto.setfundsMoney(newFunds);
+        partnerDao.PartnerFunds(partnerDto);
+
+        // Pago automático de facturas pendientes
+        /* List<InvoiceDTO> pendingInvoices = partnerDao.getPendingInvoices(partnerDto.getId());
+        for (InvoiceDTO invoice : pendingInvoices) {
+            if (newFunds >= invoice.getAmount()) {
+                newFunds -= invoice.getAmount();
+                partnerDao.payInvoice(invoice.getId());
+                partnerDto.setfundsMoney(newFunds);
+                partnerDao.PartnerFunds(partnerDto);
+            } else {
+                break;
+            }
+        }
+    }
+     */
     @Override
 //Solicitud de suscripción VIP
     public void requestVIPSubscription(UserDTO userDto) throws Exception {
@@ -140,19 +165,6 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
         return invoiceDao.getInvoicesPartner(partnerId);
     }
 
-    @Override
-    public List<InvoiceDTO> getGuestInvoices(long guestId) throws Exception {
-        GuestDTO guest = guestDao.findGuestById(guestId);
-        if (guest == null) {
-            throw new Exception("invitado no encontrado");
-        }
-        PartnerDTO partner = guest.getPartnerId();
-        if (partner == null) {
-            throw new Exception("Este invitado no está asociado a ningún socio");
-        }
-        return invoiceDao.getInvoicesByGuestId(guestId);
-    }
-
     // Método para crear factura
     @Override
     public void createInvoice(InvoiceDTO invoiceDto) throws Exception {
@@ -170,9 +182,19 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
     }
 
     @Override
-    // Método para pagar factura
     public void payInvoices(long userId) throws Exception {
         try {
+            // Validar que el userId sea válido
+            if (userId <= 0) {
+                throw new Exception("ID de usuario inválido");
+            }
+
+            // Validar que el usuario existe
+            UserDTO userDTO = userDao.findUserById(userId);
+            if (userDTO == null) {
+                throw new Exception("Usuario no encontrado");
+            }
+
             // Obtener el socio basado en el ID de usuario
             PartnerDTO partnerDTO = partnerDao.findPartnerByUserId(userId);
             if (partnerDTO == null) {
@@ -262,19 +284,143 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
 
     }
 
-    // activar invitado
     @Override
-    public void activateGuest(long guestId) throws Exception {
+    public List<InvoiceDTO> getGuestInvoices(long guestId) throws Exception {
         try {
-            // Verificar sesión de usuario
-            if (user == null) {
-                throw new Exception("No hay un usuario autenticado actualmente.");
+            // Validar que existe el invitado
+            GuestDTO guest = guestDao.findGuestById(guestId);
+            if (guest == null) {
+                throw new Exception("Invitado no encontrado con ID: " + guestId);
             }
 
-            // Obtener el socio actual
-            PartnerDTO currentPartner = partnerDao.findPartnerByUserId(user.getId());
+            // Validar que tiene un socio asociado
+            PartnerDTO partner = guest.getPartnerId();
+            if (partner == null) {
+                throw new Exception("El invitado no tiene un socio responsable asociado");
+            }
+
+            // Obtener todas las facturas del invitado
+            List<InvoiceDTO> guestInvoices = invoiceDao.getInvoicesByGuestId(guestId);
+
+            // Si no hay facturas, devolver lista vacía en lugar de null
+            if (guestInvoices == null) {
+                return new ArrayList<>();
+            }
+
+            return guestInvoices;
+        } catch (Exception e) {
+            throw new Exception("Error al obtener las facturas del invitado: " + e.getMessage());
+        }
+    }
+
+//
+    @Override
+    public List<InvoiceDTO> getGuestPendingInvoice(long guesId) throws Exception {
+        try {
+            // Validar que existe el invitado
+            GuestDTO guest = guestDao.findGuestById(guesId);
+            if (guest == null) {
+                throw new Exception("Invitado no encontrado con ID: " + guesId);
+            }
+
+            // Validar que tiene un socio asociado
+            PartnerDTO partner = guest.getPartnerId();
+            if (partner == null) {
+                throw new Exception("El invitado no tiene un socio responsable asociado");
+            }
+
+            // Obtener todas las facturas del invitado
+            List<InvoiceDTO> allGuestInvoices = guestDao.getGuestPendingInvoices(guesId);
+
+            // Filtrar solo las facturas pendientes (status = false)
+            List<InvoiceDTO> pendingInvoices = new ArrayList<>();
+            for (InvoiceDTO invoice : allGuestInvoices) {
+                if (!invoice.isStatus()) {
+                    pendingInvoices.add(invoice);
+                }
+            }
+
+            return pendingInvoices;
+        } catch (Exception e) {
+            throw new Exception("Error al obtener las facturas pendientes del invitado: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public List<InvoiceDTO> getGuestPaidInvoices(long guestId) throws Exception {
+        try {
+            // Validar que existe el invitado
+            GuestDTO guest = guestDao.findGuestById(guestId);
+            if (guest == null) {
+                throw new Exception("Invitado no encontrado con ID: " + guestId);
+            }
+
+            // Validar que tiene un socio asociado
+            PartnerDTO partner = guest.getPartnerId();
+            if (partner == null) {
+                throw new Exception("El invitado no tiene un socio responsable asociado");
+            }
+
+            // Obtener todas las facturas del invitado
+            List<InvoiceDTO> allGuestInvoices = guestDao.getGuestPaidInvoices(guestId);
+
+            // Filtrar solo las facturas pagadas (status = true)
+            List<InvoiceDTO> paidInvoices = new ArrayList<>();
+            for (InvoiceDTO invoice : allGuestInvoices) {
+                if (invoice.isStatus()) {
+                    paidInvoices.add(invoice);
+                }
+            }
+
+            return paidInvoices;
+        } catch (Exception e) {
+            throw new Exception("Error al obtener las facturas pagadas del invitado: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public double getTotalInvoicesAmount(long partnerId) throws Exception {
+        double totalAmount = 0;
+
+        try {
+            // Obtener el socio
+            PartnerDTO partner = partnerDao.findPartnerById(partnerId);
+            if (partner == null) {
+                throw new Exception("Socio no encontrado con ID: " + partnerId);
+            }
+
+            // 1. Obtener todas las facturas del socio
+            List<InvoiceDTO> partnerInvoices = invoiceDao.getInvoicesPartner(partnerId);
+            for (InvoiceDTO invoice : partnerInvoices) {
+                totalAmount += invoice.getAmount();
+            }
+
+            // 2. Obtener todos los invitados del socio
+            List<GuestDTO> guests = guestDao.findGuestsByPartnerId(partnerId);
+
+            // 3. Para cada invitado, obtener sus facturas
+            for (GuestDTO guest : guests) {
+                List<InvoiceDTO> guestInvoices = invoiceDao.getInvoicesByGuestId(guest.getId());
+                for (InvoiceDTO invoice : guestInvoices) {
+                    totalAmount += invoice.getAmount();
+                }
+            }
+
+            return totalAmount;
+
+        } catch (Exception e) {
+            throw new Exception("Error al calcular el total de facturas: " + e.getMessage());
+        }
+    }
+
+    // activar invitado
+    @Override
+    public void activateGuest(long guestId, long partnerId) throws Exception {
+        try {
+            // Obtener el socio
+            PartnerDTO currentPartner = partnerDao.findPartnerById(partnerId);
             if (currentPartner == null) {
-                throw new Exception("No se encontró un socio asociado al usuario actual.");
+                throw new Exception("No se encontró el socio asociado.");
             }
 
             // Obtener el invitado
@@ -288,7 +434,24 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
                 throw new Exception("El invitado no está asociado a su cuenta.");
             }
 
-            // Activar el invitado
+            // Verificar si ya está activo
+            if (guestDTO.isStatus()) {
+                throw new Exception("El invitado ya se encuentra activo.");
+            }
+
+            // Verificar facturas pendientes del socio responsable
+            List<InvoiceDTO> unpaidPartnerInvoices = invoiceDao.UnpaidInvoicesPartner(partnerId);
+            if (!unpaidPartnerInvoices.isEmpty()) {
+                double totalPartnerPending = 0;
+                for (InvoiceDTO invoice : unpaidPartnerInvoices) {
+                    totalPartnerPending += invoice.getAmount();
+                }
+                throw new Exception("No se puede activar el invitado.\n"
+                        + "El socio responsable tiene facturas pendientes\n"
+                        + "por un monto total de $" + totalPartnerPending + ".\n");
+            }
+
+            // Si pasa todas las validaciones, activar el invitado
             guestDTO.setStatus(true);
             guestDao.updateGuest(guestDTO);
 
@@ -298,17 +461,12 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
     }
 
     @Override
-    public void desactivateGuest(long guestId) throws Exception {
+    public void desactivateGuest(long guestId, long partnerId) throws Exception {
         try {
-            // Verificar sesión de usuario
-            if (user == null) {
-                throw new Exception("No hay un usuario autenticado actualmente.");
-            }
-
-            // Obtener el socio actual
-            PartnerDTO currentPartner = partnerDao.findPartnerByUserId(user.getId());
+            // Obtener el socio
+            PartnerDTO currentPartner = partnerDao.findPartnerById(partnerId);
             if (currentPartner == null) {
-                throw new Exception("No se encontró un socio asociado al usuario actual.");
+                throw new Exception("No se encontró el socio asociado.");
             }
 
             // Obtener el invitado
@@ -331,14 +489,23 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
         }
     }
 
-
     // baja del socio 
     @Override
     public void lowPartner(long userId) throws Exception {
+        // Validar que el userId no sea 0 o negativo
+        if (userId <= 0) {
+            throw new Exception("El ID del usuario no puede ser un valor vacío o inválido");
+        }
+
+        // Buscar el usuario primero para validar que existe
+        UserDTO userDTO = userDao.findUserById(userId);
+        if (userDTO == null) {
+            throw new Exception("No se encontró ningún usuario con el ID: " + userId);
+        }
 
         PartnerDTO partner = partnerDao.findPartnerByUserId(userId);
         if (partner == null) {
-            throw new Exception("--No se encontró socio para el ID de usuario proporcionado: " + userId + "--");
+            throw new Exception("No se encontró socio para el ID de usuario proporcionado: " + userId);
         }
 
         long partnerId = partner.getId();
@@ -346,9 +513,7 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
         // Verificar facturas sin pagar
         List<InvoiceDTO> unpaidInvoices = invoiceDao.UnpaidInvoicesPartner(partnerId);
         if (!unpaidInvoices.isEmpty()) {
-            throw new Exception("""
-                                === El socio tiene facturas pendientes de pago. ===""");
-
+            throw new Exception("El socio tiene facturas pendientes de pago.");
         }
 
         try {
@@ -381,11 +546,10 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
             PersonDTO personToDelete = partner.getUserId().getPersonId();
             personDao.deletePerson(personToDelete);
 
-            System.out.println("La cuenta del socio con ID " + " --" + partnerId + "--"
-                    + " se eliminó correctamente.");
+            System.out.println("La cuenta del socio con ID " + partnerId + " se eliminó correctamente.");
         } catch (Exception e) {
-            throw new Exception("==Se produjo un error al procesar la eliminación de la cuenta del socio con ID "
-                    + partnerId + ": " + e.getMessage() + " ==");
+            throw new Exception("Se produjo un error al procesar la eliminación de la cuenta del socio con ID "
+                    + partnerId + ": " + e.getMessage());
         }
     }
 
@@ -454,16 +618,46 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
         }
     }
 
-    //Subir fondos
     @Override
     public void uploadFunds(long userId, double amount) throws Exception {
-        PartnerDTO partnerDto = partnerDao.findPartnerByUserId(userId);
-        if (partnerDto == null) {
-            throw new Exception("Socio no encontrado");
+        try {
+            // 1. Validar usuario
+            UserDTO userDTO = userDao.findUserById(userId);
+            if (userDTO == null) {
+                throw new Exception("Usuario no encontrado");
+            }
+
+            // 2. Validar que el usuario tiene datos de persona
+            // 3. Validar que existe el socio
+            PartnerDTO partnerDto = findPartnerByUserId(userId);
+            if (partnerDto == null) {
+                throw new Exception("No se encontró el socio para el ID de usuario: " + userId);
+            }
+
+            // 4. Validar límites de suscripción
+            double maxFunds = partnerDto.getTypeSuscription().equalsIgnoreCase("vip") ? 5050000 : 1050000;
+            double newFunds = partnerDto.getfundsMoney() + amount;
+
+            if (newFunds > maxFunds) {
+                throw new Exception("El monto total excedería el límite máximo de " + maxFunds
+                        + " para su tipo de suscripción (" + partnerDto.getTypeSuscription() + ")");
+            }
+
+            // 5. Actualizar fondos
+            partnerDto.setfundsMoney(newFunds);
+            partnerDao.PartnerFunds(partnerDto);
+
+          /*  // 6. Registrar transacción
+            InvoiceDTO invoiceDto = new InvoiceDTO();
+            invoiceDto.setPartnerId(partnerDto);
+            invoiceDto.setAmount(amount);
+            invoiceDto.setStatus(true);
+            invoiceDto.setCreationDate(new Date(System.currentTimeMillis()));
+            invoiceDao.createAllInvoices(invoiceDto);*/
+
+        } catch (Exception e) {
+            throw new Exception("Error al procesar la carga de fondos: " + e.getMessage());
         }
-        double newFunds = partnerDto.getfundsMoney() + amount;
-        partnerDto.setfundsMoney(newFunds);
-        partnerDao.PartnerFunds(partnerDto);
     }
 
     @Override
@@ -644,40 +838,29 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
     }
 
     @Override
-    public void createGuest(UserDTO userDTO, long userId, PersonDTO personDTO) throws Exception {
+    public void createGuest(GuestDTO guestDto) throws Exception {
         try {
             // Encontrar el socio basado en el ID de usuario
-            PartnerDTO partnerDTO = partnerDao.findPartnerByUserId(userId);
+            PartnerDTO partnerDTO = partnerDao.findPartnerById(guestDto.getPartnerId().getId());
             if (partnerDTO == null) {
-                throw new Exception("No se encontró un socio asociado al usuario actual. ID de usuario: " + userId);
+
+                throw new Exception("No se encontró un socio asociado al usuario actual ");
             }
 
-            // Crear la persona
-            if (personDTO == null) {
-                throw new Exception("Falta PersonDTO en UserDTO");
-            }
-
-            if (personDao.existsByDocument(personDTO)) {
+            if (personDao.existsByDocument(guestDto.getUserId().getPersonId())) {
                 throw new Exception(" ya existe una persona con ese documento ");
             }
 
             // Crear el usuario
-            if (userDao.existsByUserName(userDTO)) {
-                personDao.deletePerson(personDTO);
+            if (userDao.existsByUserName(guestDto.getUserId())) {
                 throw new Exception("Ya existe un usuario con ese nombre de usuario");
             }
 
-            personDao.createPerson(personDTO);
+            personDao.createPerson(guestDto.getUserId().getPersonId());
 
-            userDTO.setRol("invitado");
-            userDao.createUser(userDTO);
+            userDao.createUser(guestDto.getUserId());
 
-            // Crear el invitado
-            GuestDTO guestDTO = new GuestDTO();
-            guestDTO.setUserId(userDTO);
-            guestDTO.setPartnerId(partnerDTO);
-            guestDTO.setStatus(true);
-            guestDao.createGuest(guestDTO);
+            guestDao.createGuest(guestDto);
 
             System.out.println("Invitado creado exitosamente.");
         } catch (Exception e) {
@@ -735,12 +918,12 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
                 for (InvoiceDTO invoice : unpaidSponsorInvoices) {
                     totalSponsorPending += invoice.getAmount();
                 }
-                throw new Exception("El socio responsable tiene facturas pendientes por $\n"
+                throw new Exception("El socio responsable tiene facturas pendientes por $" + "\n"
                         + totalSponsorPending + " que deben ser pagadas antes de la conversión.");
             }
 
         } catch (Exception e) {
-            throw new Exception("Error al verificar facturas del socio responsable: \n " + e.getMessage());
+            throw new Exception("Error al verificar facturas del socio responsable: " + "\n " + e.getMessage());
         }
 
         try {
@@ -772,7 +955,7 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
         try {
             return guestDao.findGuestByUserId(userId);
         } catch (Exception e) {
-            throw new Exception("Error al buscar el socio por ID de usuario: " + e.getMessage());
+            throw new Exception("Error al buscar el invitado por ID de usuario: " + e.getMessage());
         }
 
     }

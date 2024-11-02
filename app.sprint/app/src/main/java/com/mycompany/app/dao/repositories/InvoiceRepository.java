@@ -4,6 +4,8 @@
  */
 package com.mycompany.app.dao.repositories;
 
+import com.mycompany.app.Dto.InvoiceDTO;
+import com.mycompany.app.model.Guest;
 import com.mycompany.app.model.Invoice;
 import com.mycompany.app.model.Partner;
 import com.mycompany.app.model.Person;
@@ -31,8 +33,15 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
     public List<Invoice> findByStatus(boolean status);
 
-    public List<Invoice> findByPartnerId_IdAndStatusFalse(long partnerId);
+    public List<Invoice> findByPersonId_IdAndStatusTrue(long id);
 
-    public List<Invoice> findByPersonId_IdAndStatusFalse(long guestId);
+    List<Invoice> findByPersonId_IdAndStatusTrue(Long personId);
+
+    List<Invoice> findByPersonId_IdAndStatusFalse(Long personId);
+
+    List<Invoice> findByPersonId_Id(Long personId);
+
+    public List<Invoice> findByPartnerId_IdAndStatusFalse(long partnerId);
+    
 
 }
