@@ -1,10 +1,10 @@
 package com.mycompany.app.Controller;
 
 import com.mycompany.app.Controller.Request.CreateUserRequest;
+import com.mycompany.app.Controller.Request.PrintAll_InvoicesRequest;
 import com.mycompany.app.Controller.Request.PrintInvoicesGuestRequest;
 import com.mycompany.app.Controller.Request.PrintnvoicesPartnerRequest;
 import com.mycompany.app.Controller.Request.PrintInvoicesRequest;
-import com.mycompany.app.Controller.Request.RequestPromotion;
 import com.mycompany.app.Controller.Request.ReviewVIPRequest;
 import com.mycompany.app.Controller.Validator.UserValidator;
 import com.mycompany.app.Controller.Validator.PersonValidator;
@@ -15,7 +15,7 @@ import com.mycompany.app.Dto.UserDTO;
 import com.mycompany.app.Dto.PartnerDTO;
 import com.mycompany.app.service.ClubService;
 import com.mycompany.app.Dto.InvoiceDTO;
-import com.mycompany.app.service.Interface.Adminservice;
+import com.mycompany.app.dao.interfaces.GuestDao;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -53,6 +53,9 @@ public class AdminController implements ControllerInterface {
 
     @Autowired
     private PartnerController partnerController;
+
+    @Autowired
+    private GuestDao guestDao;
 
     private static final String MENU = "ingrese la opcion que desea \n 1.para crear socio  \n 2. Revisar solicitudes vip    \n 3. Ver historial de facturas de socios \n 4. cerrar sesion. \n";
 
@@ -104,35 +107,6 @@ public class AdminController implements ControllerInterface {
 
     }
 
-// Llamar al método de servicio para crear el partner
-// private void createGuest() throws Exception {
-//    System.out.println("ingrese el nombre del invitado: ");
-//  String name = Utils.getReader().nextLine();
-//  PersonValidator.validName(name);
-//  System.out.println("ingrese la cedula del invitado: ");
-//  long cc = PersonValidator.validDocument(Utils.getReader().nextLine());
-//  System.out.println("ingrese el numero de celular del invitado: ");
-//  long cel = PersonValidator.validCelphone(Utils.getReader().nextLine());
-//  System.out.println("ingrese el nombre de usuario del invitado: ");
-//  String userName = Utils.getReader().nextLine();
-//  userValidator.validUserName(userName);
-//  System.out.println("ingrese la contraseña");
-//  String password = Utils.getReader().nextLine();
-//  userValidator.validPassword(password);
-//  System.out.println("ingrese el ID del socio que lo invita: ");
-//  long ID = partnerValidator.valiedId(Utils.getReader().nextLine());
-//  PersonDTO personDTO = new PersonDTO();
-//  personDTO.setName(name);
-//  personDTO.setCedula(cc);
-//  personDTO.setCelphone(cel);
-//  PartnerDTO partnerdto = new PartnerDTO();
-//  partnerdto.setId(ID);
-//  UserDTO userDTO = new UserDTO();
-//  userDTO.setPersonId(personDTO);
-//  userDTO.setUsername(userName);
-//  userDTO.setRol("Invitado");
-//  System.out.println("Se ha creado el usuario exitosamente.");
-//}
 // Revisar solicitudes VIP
     @PutMapping("/reviewvip")
     private ResponseEntity<String> reviewVIPRequests(@RequestBody ReviewVIPRequest request) throws Exception {
@@ -270,74 +244,106 @@ public class AdminController implements ControllerInterface {
 
                 formattedInvoices.add(invoiceMap);
             }
-     
+
         }
 
         return formattedInvoices;
     }
 
-    //imprimir facturas
     @GetMapping("/printinvoices")
-    private ResponseEntity<?> printInvoices(@RequestBody PrintInvoicesRequest request) {
+    private ResponseEntity<?> printInvoices(@RequestBody PrintAll_InvoicesRequest request) {
         try {
-            // Validate request
-            if (request.getPartnerId() == null && request.getGuestId() == null) {
-                return new ResponseEntity<>("Se requiere un ID de socio o invitado", HttpStatus.BAD_REQUEST);
+            // Validate partnerId
+            if (request.getPartnerId() == null || request.getPartnerId() <= 0) {
+                return new ResponseEntity<>("Se requiere un ID de socio válido", HttpStatus.BAD_REQUEST);
             }
 
+            // Initialize response structure
             Map<String, Object> response = new HashMap<>();
-            List<InvoiceDTO> allInvoices = new ArrayList<>();
-            double totalAmount = 0;
+            List<InvoiceDTO> partnerInvoices = new ArrayList<>();
+            List<InvoiceDTO> guestInvoices = new ArrayList<>();
 
-            // If partnerId is provided
-            if (request.getPartnerId() != null && request.getPartnerId() > 0) {
-                // Get partner's total amount including guest invoices
-                totalAmount = service.getTotalInvoicesAmount(request.getPartnerId());
+            // Find partner
+            try {
+                PartnerDTO partner = service.findPartnerById(request.getPartnerId());
+                if (partner == null) {
+                    return new ResponseEntity<>("Socio no encontrado", HttpStatus.NOT_FOUND);
+                }
 
                 // Get partner's invoices
-                List<InvoiceDTO> paidInvoices = service.getPaidInvoices(request.getPartnerId());
-                List<InvoiceDTO> pendingInvoices = service.getPendingInvoices(request.getPartnerId());
+                List<InvoiceDTO> partnerPaidInvoices = service.getPaidInvoices(partner.getId());
+                List<InvoiceDTO> partnerPendingInvoices = service.getPendingInvoices(partner.getId());
 
-                if (paidInvoices != null) {
-                    allInvoices.addAll(paidInvoices);
-                }
-                if (pendingInvoices != null) {
-                    allInvoices.addAll(pendingInvoices);
-                }
-
-                // Get partner's guests' invoices
-                PartnerDTO partner = service.findPartnerById(request.getPartnerId());
-                response.put("partnerName", partner.getUserId().getPersonId().getName());
-                response.put("partnerId", request.getPartnerId());
-            } // If guestId is provided
-            else if (request.getGuestId() != null && request.getGuestId() > 0) {
-                GuestDTO guest = service.findGuestByUserId(request.getGuestId());
-                if (guest == null) {
-                    return new ResponseEntity<>("No se encontró el invitado con el ID proporcionado", HttpStatus.NOT_FOUND);
+                // Partner information
+                Map<String, Object> partnerInfo = new HashMap<>();
+                partnerInfo.put("partnerId", partner.getId());
+                if (partner.getUserId() != null && partner.getUserId().getPersonId() != null) {
+                    partnerInfo.put("partnerName", partner.getUserId().getPersonId().getName());
                 }
 
-                List<InvoiceDTO> guestPendingInvoices = service.getGuestPendingInvoice(guest.getId());
-                List<InvoiceDTO> guestPaidInvoices = service.getGuestPaidInvoices(guest.getId());
-
-                if (guestPendingInvoices != null) {
-                    allInvoices.addAll(guestPendingInvoices);
+                // Add partner's invoices
+                if (partnerPaidInvoices != null) {
+                    partnerInvoices.addAll(partnerPaidInvoices);
                 }
-                if (guestPaidInvoices != null) {
-                    allInvoices.addAll(guestPaidInvoices);
+                if (partnerPendingInvoices != null) {
+                    partnerInvoices.addAll(partnerPendingInvoices);
                 }
 
-                for (InvoiceDTO invoice : allInvoices) {
-                    totalAmount += invoice.getAmount();
+                // Calculate partner statistics
+                Map<String, Object> partnerStats = calculateStatistics(partnerInvoices);
+                partnerInfo.put("statistics", partnerStats);
+                partnerInfo.put("invoices", formatInvoices(partnerInvoices));
+                response.put("partnerInformation", partnerInfo);
+
+                // Get associated guests and their invoices
+                List<GuestDTO> guests = guestDao.findGuestsByPartnerId(partner.getId());
+                if (guests != null && !guests.isEmpty()) {
+                    List<Map<String, Object>> guestsList = new ArrayList<>();
+
+                    for (GuestDTO guestDTO : guests) {
+                        Map<String, Object> guestInfo = new HashMap<>();
+                        guestInfo.put("guestId", guestDTO.getId());
+                        if (guestDTO.getUserId() != null
+                                && guestDTO.getUserId().getPersonId() != null) {
+                            guestInfo.put("guestName",
+                                    guestDTO.getUserId().getPersonId().getName());
+                        }
+
+                        // Get guest invoices
+                        List<InvoiceDTO> currentGuestInvoices = new ArrayList<>();
+                        List<InvoiceDTO> guestPaidInvoices = service.getGuestPaidInvoices(guestDTO.getId());
+                        List<InvoiceDTO> guestPendingInvoices = service.getGuestPendingInvoice(guestDTO.getId());
+
+                        if (guestPaidInvoices != null) {
+                            currentGuestInvoices.addAll(guestPaidInvoices);
+                        }
+                        if (guestPendingInvoices != null) {
+                            currentGuestInvoices.addAll(guestPendingInvoices);
+                        }
+
+                        guestInvoices.addAll(currentGuestInvoices);
+
+                        // Calculate guest statistics
+                        Map<String, Object> guestStats = calculateStatistics(currentGuestInvoices);
+                        guestInfo.put("statistics", guestStats);
+                        guestInfo.put("invoices", formatInvoices(currentGuestInvoices));
+                        guestsList.add(guestInfo);
+                    }
+                    response.put("guestsInformation", guestsList);
                 }
 
-                response.put("guestName", guest.getUserId().getPersonId().getName());
-                response.put("guestId", request.getGuestId());
+                // Add overall summary
+                Map<String, Object> summary = new HashMap<>();
+                summary.put("partnerInvoicesCount", partnerInvoices.size());
+                summary.put("guestInvoicesCount", guestInvoices.size());
+                summary.put("partnerStatistics", calculateStatistics(partnerInvoices));
+                summary.put("guestsStatistics", calculateStatistics(guestInvoices));
+                response.put("summary", summary);
+
+            } catch (Exception e) {
+                return new ResponseEntity<>("Error al buscar el socio: " + e.getMessage(),
+                        HttpStatus.INTERNAL_SERVER_ERROR);
             }
-
-            // Add common response data
-            response.put("invoiceCount", allInvoices.size());
-            response.put("totalAmount", totalAmount);
-            response.put("invoices", formatInvoices(allInvoices));
 
             return new ResponseEntity<>(response, HttpStatus.OK);
 
@@ -347,4 +353,34 @@ public class AdminController implements ControllerInterface {
         }
     }
 
+// Helper method to calculate statistics
+    private Map<String, Object> calculateStatistics(List<InvoiceDTO> invoices) {
+        double totalAmount = 0;
+        double paidAmount = 0;
+        double pendingAmount = 0;
+        int totalInvoices = invoices.size();
+        int paidInvoices = 0;
+        int pendingInvoices = 0;
+
+        for (InvoiceDTO invoice : invoices) {
+            totalAmount += invoice.getAmount();
+            if (invoice.isStatus()) {
+                paidInvoices++;
+                paidAmount += invoice.getAmount();
+            } else {
+                pendingInvoices++;
+                pendingAmount += invoice.getAmount();
+            }
+        }
+
+        Map<String, Object> statistics = new HashMap<>();
+        statistics.put("totalInvoices", totalInvoices);
+        statistics.put("paidInvoices", paidInvoices);
+        statistics.put("pendingInvoices", pendingInvoices);
+        statistics.put("totalAmount", String.format("%.2f", totalAmount));
+        statistics.put("paidAmount", String.format("%.2f", paidAmount));
+        statistics.put("pendingAmount", String.format("%.2f", pendingAmount));
+
+        return statistics;
+    }
 }

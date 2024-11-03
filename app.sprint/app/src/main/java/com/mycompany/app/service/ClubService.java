@@ -60,34 +60,6 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
 
     public static UserDTO user;
 
-    //Gestión de fondos
-    /*@Override
-    public void managementFunds(PartnerDTO partnerDto, double Amount) throws Exception {
-        double currentFunds = partnerDto.getfundsMoney();
-        double newFunds = currentFunds + Amount;
-        double maxFunds = partnerDto.getTypeSuscription().equalsIgnoreCase("vip") ? 500000 : 100000;
-
-        if (newFunds > maxFunds) {
-            throw new Exception("El monto excede el límite máximo para el tipo de suscripción.");
-        }
-
-        partnerDto.setfundsMoney(newFunds);
-        partnerDao.PartnerFunds(partnerDto);
-
-        // Pago automático de facturas pendientes
-        /* List<InvoiceDTO> pendingInvoices = partnerDao.getPendingInvoices(partnerDto.getId());
-        for (InvoiceDTO invoice : pendingInvoices) {
-            if (newFunds >= invoice.getAmount()) {
-                newFunds -= invoice.getAmount();
-                partnerDao.payInvoice(invoice.getId());
-                partnerDto.setfundsMoney(newFunds);
-                partnerDao.PartnerFunds(partnerDto);
-            } else {
-                break;
-            }
-        }
-    }
-     */
     @Override
 //Solicitud de suscripción VIP
     public void requestVIPSubscription(UserDTO userDto) throws Exception {
@@ -635,10 +607,10 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
             }
 
             // 4. Validar límites de suscripción
-            double maxFunds = partnerDto.getTypeSuscription().equalsIgnoreCase("vip") ? 5050000 : 1050000;
+            double maxFunds = partnerDto.getTypeSuscription().equalsIgnoreCase("vip") ? 5000000 : 1000000;
             double newFunds = partnerDto.getfundsMoney() + amount;
 
-            if (newFunds > maxFunds) {
+            if (amount > maxFunds) {
                 throw new Exception("El monto total excedería el límite máximo de " + maxFunds
                         + " para su tipo de suscripción (" + partnerDto.getTypeSuscription() + ")");
             }
@@ -646,14 +618,6 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
             // 5. Actualizar fondos
             partnerDto.setfundsMoney(newFunds);
             partnerDao.PartnerFunds(partnerDto);
-
-          /*  // 6. Registrar transacción
-            InvoiceDTO invoiceDto = new InvoiceDTO();
-            invoiceDto.setPartnerId(partnerDto);
-            invoiceDto.setAmount(amount);
-            invoiceDto.setStatus(true);
-            invoiceDto.setCreationDate(new Date(System.currentTimeMillis()));
-            invoiceDao.createAllInvoices(invoiceDto);*/
 
         } catch (Exception e) {
             throw new Exception("Error al procesar la carga de fondos: " + e.getMessage());
@@ -690,38 +654,48 @@ public class ClubService implements Adminservice, Loginservice, Partnerservice, 
         }
     }
 
-    /*private InvoiceDetailDTO createInvoiceDetail(int id, int productNumber) throws Exception {
-        InvoiceDetailDTO detail = new InvoiceDetailDTO();
-        detail.setId(id);
+    @Override
+    public List<InvoiceDTO> getAllInvoices(long userId) throws Exception {
+        try {
+            // Lista para almacenar todas las facturas
+            List<InvoiceDTO> allInvoices = new ArrayList<>();
 
-        switch (productNumber) {
-            case 1:
-                detail.setDescription("Cerveza");
-                detail.setAmount(5);
-                break;
-            case 2:
-                detail.setDescription("Cóctel");
-                detail.setAmount(8);
-                break;
-            case 3:
-                detail.setDescription("Agua mineral");
-                detail.setAmount(2);
-                break;
-            case 4:
-                detail.setDescription("Refresco");
-                detail.setAmount(3);
-                break;
-            case 5:
-                detail.setDescription("Snack");
-                detail.setAmount(4);
-                break;
-            default:
-                throw new Exception("Producto no válido: " + productNumber);
+            // Obtener el socio por userId
+            PartnerDTO partnerDTO = partnerDao.findPartnerByUserId(userId);
+            if (partnerDTO == null) {
+                throw new Exception("No se encontró un socio asociado al usuario con ID: " + userId);
+            }
+
+            // Obtener todas las facturas del socio
+            List<InvoiceDTO> partnerInvoices = invoiceDao.getInvoicesPartner(partnerDTO.getId());
+            if (partnerInvoices != null) {
+                allInvoices.addAll(partnerInvoices);
+            }
+
+            // Obtener todos los invitados asociados al socio
+            List<GuestDTO> guests = guestDao.findGuestsByPartnerId(partnerDTO.getId());
+
+            // Para cada invitado, obtener sus facturas
+            for (GuestDTO guest : guests) {
+            List<InvoiceDTO> guestInvoices = invoiceDao.getInvoicesByGuestId(guest.getId());
+                if (guestInvoices != null) {
+                    allInvoices.addAll(guestInvoices);
+                }
+            }
+
+            // Si no se encontraron facturas, devolver lista vacía
+            if (allInvoices.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            return allInvoices;
+
+        } catch (Exception e) {
+            throw new Exception("Error al obtener todas las facturas: " + e.getMessage());
         }
 
-        return detail;
     }
-     */
+
     @Override
     public void createInvoicePartner(InvoiceDTO invoiceDto, List<InvoiceDetailDTO> details) throws Exception {
         // Validación explícita del socio

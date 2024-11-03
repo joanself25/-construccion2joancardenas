@@ -22,7 +22,7 @@ public class CreateUserRequest {
     public String username;
     public String document;
     public String password;
-    public String partnerId;
+    public String partnerId; // para crear el invitdo
     
     
     

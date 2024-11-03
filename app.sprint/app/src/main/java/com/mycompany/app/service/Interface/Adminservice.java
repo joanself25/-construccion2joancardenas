@@ -46,4 +46,6 @@ public interface Adminservice {
 
     public List<InvoiceDTO> getPaidInvoices(long partnerId) throws Exception;
 
+    public List<InvoiceDTO> getAllInvoices(long userId) throws Exception;
+
 }

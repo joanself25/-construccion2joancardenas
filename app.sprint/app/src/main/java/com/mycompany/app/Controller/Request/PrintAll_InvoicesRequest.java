@@ -4,7 +4,6 @@
  */
 package com.mycompany.app.Controller.Request;
 
-import java.util.List;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -16,15 +15,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class CreateInvoicesRequest {
-
-    private String userId;
-    private String partnerId;
-    private List<CreateInvoicesDetailsRequest> details;//para crear detalles
-    /*details[{
-    item
-    description
-    amount
-
-    }]*/
+public class PrintAll_InvoicesRequest {
+    private Long PartnerId;
+    
 }

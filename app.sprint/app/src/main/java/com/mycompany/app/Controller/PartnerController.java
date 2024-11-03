@@ -322,8 +322,6 @@ public class PartnerController implements ControllerInterface {
             }
 
             // Validar que el usuario tiene un PersonDTO válido
-           
-
             // Llamada al servicio
             service.uploadFunds(request.getUserId(), request.getAmount());
 
